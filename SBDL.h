@@ -30,7 +30,6 @@ using Font = TTF_Font;
 
 /**
 * Texture living on the graphics card that can be used for drawing.
-*
 */
 struct Texture {
     /**
@@ -52,14 +51,14 @@ namespace SBDL {
     */
     namespace Core {
         bool running = true;
-        const std::uint8_t *keystates = nullptr;
+        const Uint8 *keystates = nullptr;
         SDL_Event event;
         SDL_Window *window = nullptr;
         SDL_Renderer *renderer = nullptr;
 
         Texture
-        loadTextureUnderneath(const std::string &path, bool changeColor, std::uint8_t r, std::uint8_t g, std::uint8_t b,
-                              int alpha = 100) {
+        loadTextureUnderneath(const std::string &path, bool changeColor, Uint8 r, Uint8 g, Uint8 b,
+                              Uint8 alpha = 255) {
             // Check existence of image
             SDL_Surface *pic = IMG_Load(path.c_str());
             if (pic == nullptr) {
@@ -70,8 +69,8 @@ namespace SBDL {
 
             if (changeColor)
                 SDL_SetColorKey(pic, SDL_TRUE, SDL_MapRGB(pic->format, r, g, b));
-            if (alpha != 100)
-                SDL_SetSurfaceAlphaMod(pic, (std::uint8_t) ((double) alpha / 100 * 255));
+            if (alpha != 255)
+                SDL_SetSurfaceAlphaMod(pic, alpha);
 
             Texture newTexture = {SDL_CreateTextureFromSurface(renderer, pic), {0, 0, pic->w, pic->h}};
 
@@ -90,6 +89,13 @@ namespace SBDL {
     }
 
     /**
+     * Enum for Mouse state.
+     * */
+    enum MouseState {
+        RELEASED, PRESSED
+    };
+
+    /**
     * a structure which give useful information about mouse state
     * update method must be call before using
     */
@@ -99,8 +105,8 @@ namespace SBDL {
         bool left;
         bool right;
         bool middle;
-        bool wheelUp;
-        bool wheelDown;
+        MouseState state;
+        int clicks;
     } Mouse;
 
     /**
@@ -112,13 +118,17 @@ namespace SBDL {
     }
 
     /**
-    * initialize SDL and show a simple empty window for drawing texture on it
-    * before start using SDL functions and types, first initialize engine
-    * @param windowsTitle title of window
-    * @param windowsWidth width of window
-    * @param windowsHeight height of window
+     * initialize SDL and show a simple empty window for drawing texture on it
+     * before start using SDL functions and types, first initialize engine
+     * @param windowsTitle title of window
+     * @param windowsWidth width of window
+     * @param windowsHeight height of window
+     * @param r red color of default background
+     * @param g green color of default background
+     * @param b blue color of default background
     */
-    void InitEngine(const std::string &windowsTitle, int windowsWidth, int windowsHeight) {
+    void InitEngine(const std::string &windowsTitle, int windowsWidth, int windowsHeight,
+                    Uint8 r = 255, Uint8 g = 255, Uint8 b = 255) {
         atexit(SDL_Quit); // set a SDL_Quit as exit function
         if (SDL_Init(SDL_INIT_VIDEO) < 0) {
             SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "SDL initialization", "SDL initialize video engine error",
@@ -128,7 +138,7 @@ namespace SBDL {
         SDL_CreateWindowAndRenderer(windowsWidth, windowsHeight, SDL_WINDOW_SHOWN, &Core::window, &Core::renderer);
         SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");  // make the scaled rendering look smoother
         SDL_RenderSetLogicalSize(Core::renderer, windowsWidth, windowsHeight);
-        SDL_SetRenderDrawColor(Core::renderer, 255, 255, 255, 255);
+        SDL_SetRenderDrawColor(Core::renderer, r, g, b, 255);
         SDL_SetRenderDrawBlendMode(Core::renderer, SDL_BLENDMODE_BLEND);
 
         SDL_SetWindowTitle(Core::window, windowsTitle.c_str());
@@ -161,21 +171,23 @@ namespace SBDL {
                 // update state of Mouse structure if it was changed
                 switch (Core::event.button.button) {
                     case 1:
-                        Mouse.left = Core::event.type == SDL_MOUSEBUTTONDOWN ? true : false;
+                        Mouse.left = true;
+                        Mouse.right = Mouse.middle = false;
                         break;
                     case 2:
-                        Mouse.middle = Core::event.type == SDL_MOUSEBUTTONDOWN ? true : false;
+                        Mouse.middle = true;
+                        Mouse.right = Mouse.left = false;
                         break;
                     case 3:
-                        Mouse.right = Core::event.type == SDL_MOUSEBUTTONDOWN ? true : false;
+                        Mouse.right = true;
+                        Mouse.left = Mouse.middle = false;
                         break;
-                    case 4:
-                        Mouse.wheelUp = Core::event.type == SDL_MOUSEBUTTONDOWN ? true : false;
-                        break;
-                    case 5:
-                        Mouse.wheelDown = Core::event.type == SDL_MOUSEBUTTONDOWN ? true : false;
-                        break;
+                    default:
+                        Mouse.left = Mouse.middle = Mouse.right = false;
                 }
+
+                Mouse.state = Core::event.button.state == SDL_RELEASED ? RELEASED : PRESSED;
+                Mouse.clicks = Core::event.button.clicks;
             }
             // update position of mouse if it was changed
             if (Core::event.type == SDL_MOUSEMOTION) {
@@ -189,10 +201,6 @@ namespace SBDL {
         }
     }
 
-    /*
-
-    you can see all scanCode in sdl site
-    */
     /**
     * indicate whether a key with specific scanCode is pressed or not
     * @param scanCode specific code for each keyboard button (https://wiki.libsdl.org/SDL_Scancode)
@@ -223,9 +231,6 @@ namespace SBDL {
         SDL_RenderPresent(Core::renderer);
     }
 
-    /*
-
-    */
     /**
     * wait a few milliseconds before continue process of application
     * @param frameRate set the dalay (milisecond)
@@ -234,9 +239,6 @@ namespace SBDL {
         SDL_Delay(frameRate);
     }
 
-    /*
-
-    */
     /**
     * load the font from a file
     * @param path path of the font file to load
@@ -247,21 +249,15 @@ namespace SBDL {
         return TTF_OpenFont(path.c_str(), size);
     }
 
-    /*
-    get texture from a path of image
-    */
     /**
     * load the texture from a file on disk
     * @param path path of the image file to load
     * @return texture which is loaded
     */
-    Texture loadTexture(const std::string &path, int alpha = 100) {
+    Texture loadTexture(const std::string &path, Uint8 alpha = 255) {
         return Core::loadTextureUnderneath(path, false, 0, 0, 0, alpha);
     }
 
-    /*
-    get texture from a path of image and remove specific color from it
-    */
     /**
     * load the texture from a file on disk and replace transparency of image with specific color
     * @param path path of the image file to load
@@ -271,7 +267,7 @@ namespace SBDL {
     * @param alpha transparency level
     * @return texture which is loaded
     */
-    Texture loadTexture(const std::string &path, std::uint8_t r, std::uint8_t g, std::uint8_t b, int alpha = 100) {
+    Texture loadTexture(const std::string &path, Uint8 r, Uint8 g, Uint8 b, Uint8 alpha = 255) {
         return Core::loadTextureUnderneath(path, true, r, g, b, alpha);
     }
 
@@ -357,41 +353,45 @@ namespace SBDL {
         x.rect = {0, 0, 0, 0};
     }
 
-
     /**
-    * texture showed in render screen in position (x,y)
+    * texture showed in render screen in position destRect with angle and flip
     * @param texture the source texture
-    * @param x position of texture
-    * @param y position of texture
     * @param angle an angle in degrees that indicates the rotation that will be applied to texture, rotating it in a clockwise direction around center of texture
+    * @param destRect  custom rect to draw texture
     * @param flip flipping actions performed on the texture (SDL_FLIP_NONE or SDL_FLIP_HORIZONTAL or SDL_FLIP_VERTICAL)
-    * @param destRect optional rect if you want to draw texture on that
     */
-    void showTexture(Texture texture, int x, int y, double angle, SDL_RendererFlip flip = SDL_FLIP_NONE,
-                     SDL_Rect destRect = {-1, -1, -1, -1}) {
-        SDL_Rect rect;
-        if (destRect == SDL_Rect{-1, -1, -1, -1})
-            rect = {x, y, texture.rect.w, texture.rect.h};
-        else
-            rect = destRect;
-        SDL_RenderCopyEx(Core::renderer, texture.underlineTexture, nullptr, &rect, angle, nullptr,
+    void showTexture(const Texture &texture, double angle, const SDL_Rect &destRect,
+                     SDL_RendererFlip flip = SDL_FLIP_NONE) {
+        SDL_RenderCopyEx(Core::renderer, texture.underlineTexture, nullptr, &destRect, angle, nullptr,
                          flip);
     }
 
     /**
-    * texture showed in render screen in position (x,y)
+    * texture showed in render screen in position texture.rect with angle and flip
     * @param texture the source texture
-    * @param x position of texture
-    * @param y position of texture
-    * @param destRect optional rect if you want to draw texture on that
+    * @param angle an angle in degrees that indicates the rotation that will be applied to texture, rotating it
+                   in a clockwise direction around center of texture
+    * @param flip flipping actions performed on the texture (SDL_FLIP_NONE or SDL_FLIP_HORIZONTAL or SDL_FLIP_VERTICAL)
     */
-    void showTexture(Texture texture, int x, int y, SDL_Rect destRect = {-1, -1, -1, -1}) {
-        SDL_Rect rect;
-        if (destRect == SDL_Rect{-1, -1, -1, -1})
-            rect = {x, y, texture.rect.w, texture.rect.h};
-        else
-            rect = destRect;
-        SDL_RenderCopy(Core::renderer, texture.underlineTexture, nullptr, &rect);
+    void showTexture(const Texture &texture, double angle, SDL_RendererFlip flip = SDL_FLIP_NONE) {
+        showTexture(texture, angle, texture.rect, flip);
+    }
+
+    /**
+    * texture showed in render screen in position destRect
+    * @param texture the source texture
+    * @param destRect custom rect to draw texture
+    */
+    void showTexture(const Texture &texture, const SDL_Rect &destRect) {
+        SDL_RenderCopy(Core::renderer, texture.underlineTexture, nullptr, &destRect);
+    }
+
+    /**
+    * texture showed in render screen in position texture.rect
+    * @param texture the source texture
+    */
+    void showTexture(const Texture &texture) {
+        showTexture(texture, texture.rect);
     }
 
     /**
@@ -403,7 +403,7 @@ namespace SBDL {
     * @param b blue color
     * @return texture which created with that font
     */
-    Texture createFontTexture(Font *font, const std::string &text, std::uint8_t r, std::uint8_t g, std::uint8_t b) {
+    Texture createFontTexture(Font *font, const std::string &text, Uint8 r, Uint8 g, Uint8 b) {
         SDL_Color color = {r, g, b};
         SDL_Surface *temp = TTF_RenderText_Solid(font, text.c_str(), color);
 
@@ -420,5 +420,42 @@ namespace SBDL {
     */
     bool hasIntersectionRect(const SDL_Rect &x, const SDL_Rect &y) {
         return SDL_HasIntersection(&x, &y) == SDL_TRUE;
+    }
+
+    /**
+     * Draw rectangle on renderer screen.
+     * @param rect rectangle position
+     * @param r red
+     * @param g green
+     * @param b blue
+     * @param alpha transparency
+     */
+    void drawRectangle(const SDL_Rect &rect, Uint8 r, Uint8 g, Uint8 b, Uint8 alpha = 255) {
+        Uint8 defaults[4];
+        SDL_GetRenderDrawColor(Core::renderer, &defaults[0], &defaults[1], &defaults[2], &defaults[3]);
+        SDL_SetRenderDrawColor(Core::renderer, r, g, b, alpha);
+        SDL_RenderFillRect(Core::renderer, &rect);
+        SDL_SetRenderDrawColor(Core::renderer, defaults[0], defaults[1], defaults[2], defaults[3]);
+    }
+
+    /**
+     * Check if a point is inside a Rect
+     * @param x
+     * @param y
+     * @param rect the Rectangle to check with
+     * @return true if point is inside the rect
+     */
+    bool pointInRect(int x, int y, const SDL_Rect &rect) {
+        SDL_Point point = {x, y};
+        return SDL_PointInRect(&point, &rect) == SDL_TRUE;
+    }
+
+    /**
+     * Check if mouse is inside a rect
+     * @param rect the Rectangle to check with
+     * @return true if mouse is inside the rect
+     */
+    bool mouseInRect(const SDL_Rect &rect) {
+        return pointInRect(Mouse.x, Mouse.y, rect);
     }
 }
