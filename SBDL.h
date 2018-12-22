@@ -1,5 +1,5 @@
 /**
-* SBDL: Sadegh & Borjian 's Direct media Layer! (not Shahid Beheshti's Direct media Layer)
+* SBDL: Sadegh & Borjian Directmedia Layer!
 */
 #pragma once
 
