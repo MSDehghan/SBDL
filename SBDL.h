@@ -1,12 +1,11 @@
 /**
 * SBDL: Sadegh & Borjian Directmedia Layer!
 */
-#pragma once
 
 #include <string>
 
 #if defined(_WIN32) || defined(_WIN64) // Windows
-
+#pragma once
 #include "SDL.h"
 #include "SDL_image.h"
 #include "SDL_ttf.h"
@@ -22,8 +21,19 @@
 #endif
 #undef main
 
+/**
+* represent a Sound
+* */
 using Sound = Mix_Chunk;
+
+/**
+* represent a Music
+* */
 using Music = Mix_Music;
+
+/**
+* represent a Font
+* */
 using Font = TTF_Font;
 
 /**
@@ -37,9 +47,14 @@ struct Texture {
 	SDL_Texture *underneathTexture = nullptr;
 
 	/**
-	* size of this Texture
+	* width of this Texture
 	* */
-	int width, height;
+	int width;
+	
+	/**
+	* height of this Texture
+	* */
+	int height;
 };
 
 namespace SBDL {
@@ -132,15 +147,46 @@ namespace SBDL {
 	* a structure which give useful information about mouse state
 	* updateEvents must be call before using this structure
 	*/
-	struct {
+	struct Mouse {
+		/**
+		* x position of Mouse
+		*/
 		int x;
+
+		/**
+		* y position of Mouse
+		*/
 		int y;
+
+		/**
+		* left button state 
+		*/
 		bool left;
+
+		/**
+		* right button state
+		*/
 		bool right;
+
+		/**
+		* middle button state
+		*/
 		bool middle;
-		Uint8 state;  /**< SDL_PRESSED or SDL_RELEASED */
+
+		/**
+		* state of Mouse  < SDL_PRESSED or SDL_RELEASED >
+		*/
+		Uint8 state; 
+
+		/**
+		* button clicks 
+		*/
 		Uint8 clicks;
-		Uint8 button; /** SDL backward compatibility */
+
+		/**
+		* for SDL backward compatibility
+		*/
+		Uint8 button;
 
 		/**
 		 * Check if Mouse clicked with given conditions.
@@ -166,13 +212,6 @@ namespace SBDL {
 	*/
 	void stop() {
 		Core::running = false;
-	}
-
-	/**
-	* set the user-resizable state of a window
-	*/
-	void setWindowResizable(bool resizable) {
-		SDL_SetWindowResizable(Core::window, resizable ? SDL_TRUE : SDL_FALSE);
 	}
 
 	/**
@@ -438,7 +477,7 @@ namespace SBDL {
 
 	/**
 	* free memory which is used for load sound from file
-	* @param sound strcuture
+	* @param sound Sound which you want to destroy
 	*/
 	void freeSound(Sound *sound) {
 		Mix_FreeChunk(sound);
@@ -446,7 +485,7 @@ namespace SBDL {
 
 	/**
 	* free memory which is used for load music from file
-	* @param music strcuture
+	* @param music Music which you want to destroy
 	*/
 	void freeMusic(Music *music) {
 		Mix_FreeMusic(music);
@@ -455,20 +494,20 @@ namespace SBDL {
 	/**
 	* free memory which is used for texture
 	* After call this function, texture is not usable anymore and any using has undefined behavior
-	* @param texture strcuture
+	* @param texture Texture which you want to destroy
 	*/
 	void freeTexture(Texture &texture) {
-		SDL_DestroyTexture(x.underneathTexture);
-		x.underneathTexture = nullptr;
-		x.width = 0;
-		x.height = 0;
+		SDL_DestroyTexture(texture.underneathTexture);
+		texture.underneathTexture = nullptr;
+		texture.width = 0;
+		texture.height = 0;
 	}
 
 	/**
 	* texture showed in render screen in position destRect with angle and flip
 	* @param texture the source texture
 	* @param angle an angle in degrees that indicates the rotation that will be applied to texture, rotating it in a clockwise direction around center of texture
-	* @param destRect  custom rect to draw texture
+	* @param destRect custom rect to draw texture
 	* @param flip flipping actions performed on the texture (SDL_FLIP_NONE or SDL_FLIP_HORIZONTAL or SDL_FLIP_VERTICAL)
 	*/
 	void showTexture(const Texture &texture, double angle, const SDL_Rect &destRect,
@@ -526,7 +565,7 @@ namespace SBDL {
 	* @param r red color
 	* @param g green color
 	* @param b blue color
-	* @return texture which created with that font
+	* @return texture which created with that font and text
 	*/
 	Texture createFontTexture(Font *font, const std::string &text, Uint8 r, Uint8 g, Uint8 b) {
 		SDL_Color color;
@@ -546,20 +585,20 @@ namespace SBDL {
 
 	/**
 	* check intersection of two SDL_Rect
-	* @param x first rectangle
-	* @param y second rectangle
-	* @return true if intersect each other
+	* @param firstRect first rectangle
+	* @param secondRect second rectangle
+	* @return true if has intersection
 	*/
-	bool hasIntersectionRect(const SDL_Rect &x, const SDL_Rect &y) {
-		return SDL_HasIntersection(&x, &y) == SDL_TRUE;
+	bool hasIntersectionRect(const SDL_Rect &firstRect, const SDL_Rect &secondRect) {
+		return SDL_HasIntersection(&firstRect, &secondRect) == SDL_TRUE;
 	}
 
 	/**
 	* Draw rectangle on renderer screen.
 	* @param rect rectangle position
-	* @param r red
-	* @param g green
-	* @param b blue
+	* @param r red color
+	* @param g green color
+	* @param b blue color
 	* @param alpha transparency
 	*/
 	void drawRectangle(const SDL_Rect &rect, Uint8 r, Uint8 g, Uint8 b, Uint8 alpha = 255) {
@@ -574,8 +613,8 @@ namespace SBDL {
 	* Check if a point is inside a Rect
 	* @param x
 	* @param y
-	* @param rect the Rectangle to check with
-	* @return true if point is inside the rect
+	* @param rect the rectangle to check with
+	* @return true if point is inside the rectangle
 	*/
 	bool pointInRect(int x, int y, const SDL_Rect &rect) {
 		SDL_Point point;
@@ -586,8 +625,8 @@ namespace SBDL {
 
 	/**
 	* Check if mouse is inside a rect
-	* @param rect the Rectangle to check with
-	* @return true if mouse is inside the rect
+	* @param rect check when mouse is inside this rectangle
+	* @return true if mouse is inside the rectangle
 	*/
 	bool mouseInRect(const SDL_Rect &rect) {
 		return pointInRect(Mouse.x, Mouse.y, rect);
