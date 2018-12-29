@@ -50,7 +50,7 @@ struct Texture {
 	* width of this Texture
 	* */
 	int width;
-	
+
 	/**
 	* height of this Texture
 	* */
@@ -130,7 +130,7 @@ namespace SBDL {
 			newTexture.height = pic->h;
 
 			SDL_SetTextureBlendMode(newTexture.underneathTexture, SDL_BLENDMODE_BLEND);
-			SDL_FreeSurface(pic);			
+			SDL_FreeSurface(pic);
 
 			return newTexture;
 		}
@@ -159,7 +159,7 @@ namespace SBDL {
 		int y;
 
 		/**
-		* left button state 
+		* left button state
 		*/
 		bool left;
 
@@ -176,10 +176,10 @@ namespace SBDL {
 		/**
 		* state of Mouse  < SDL_PRESSED or SDL_RELEASED >
 		*/
-		Uint8 state; 
+		Uint8 state;
 
 		/**
-		* button clicks 
+		* button clicks
 		*/
 		Uint8 clicks;
 
@@ -212,6 +212,33 @@ namespace SBDL {
 	*/
 	void stop() {
 		Core::running = false;
+	}
+
+	/**
+	* indicate whether a key with specific scanCode was pressed
+	* @param scanCode specific code for each keyboard button (https://wiki.libsdl.org/SDL_Scancode)
+	* @return true if specific keyboard button was pressed
+	*/
+	bool keyPressed(SDL_Scancode scanCode) {
+		return !Core::old_keystate[scanCode] && Core::keystate[scanCode];
+	}
+
+	/**
+	* indicate whether a key with specific scanCode was released
+	* @param scanCode specific code for each keyboard button (https://wiki.libsdl.org/SDL_Scancode)
+	* @return true if specific keyboard button was released
+	*/
+	bool keyReleased(SDL_Scancode scanCode) {
+		return Core::old_keystate[scanCode] && !Core::keystate[scanCode];
+	}
+
+	/**
+	* indicate whether a key with specific scanCode is hold
+	* @param scanCode specific code for each keyboard button (https://wiki.libsdl.org/SDL_Scancode)
+	* @return true if specific keyboard button is hold
+	*/
+	bool keyHeld(SDL_Scancode scanCode) {
+		return Core::old_keystate[scanCode] && Core::keystate[scanCode];
 	}
 
 	/**
@@ -271,6 +298,12 @@ namespace SBDL {
 				Core::old_keystate[i] = Core::keystate[i];
 			Core::keystate = SDL_GetKeyboardState(&Core::keystate_size);
 		}
+		SDL_PumpEvents();
+
+		// close app if ESCAPE pressed
+		if (keyPressed(SDL_SCANCODE_ESCAPE)) {
+			Core::running = false;
+		}
 
 		// reset event handler state for check it again
 		Core::event = {};
@@ -310,38 +343,10 @@ namespace SBDL {
 				Mouse.x = Core::event.motion.x;
 				Mouse.y = Core::event.motion.y;
 			}
-			// close app if ESCAPE pressed
-			if (Core::event.type == SDL_QUIT || Core::event.key.keysym.sym == SDLK_ESCAPE) {
+			if (Core::event.type == SDL_QUIT) {
 				Core::running = false;
 			}
 		}
-	}
-
-	/**
-	* indicate whether a key with specific scanCode was pressed
-	* @param scanCode specific code for each keyboard button (https://wiki.libsdl.org/SDL_Scancode)
-	* @return true if specific keyboard button was pressed
-	*/
-	bool keyPressed(SDL_Scancode scanCode) {
-		return !Core::old_keystate[scanCode] && Core::keystate[scanCode];
-	}
-
-	/**
-	* indicate whether a key with specific scanCode was released
-	* @param scanCode specific code for each keyboard button (https://wiki.libsdl.org/SDL_Scancode)
-	* @return true if specific keyboard button was released
-	*/
-	bool keyReleased(SDL_Scancode scanCode) {
-		return Core::old_keystate[scanCode] && !Core::keystate[scanCode];
-	}
-
-	/**
-	* indicate whether a key with specific scanCode is hold
-	* @param scanCode specific code for each keyboard button (https://wiki.libsdl.org/SDL_Scancode)
-	* @return true if specific keyboard button is hold
-	*/
-	bool keyHeld(SDL_Scancode scanCode) {
-		return Core::old_keystate[scanCode] && Core::keystate[scanCode];
 	}
 
 	/**
