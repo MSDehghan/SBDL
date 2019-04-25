@@ -1,5 +1,5 @@
 /**
-* SBDL: Sadegh Directmedia Layer!
+* SBDL: Sadegh & Borjian Directmedia Layer!
 */
 
 #include <string>
